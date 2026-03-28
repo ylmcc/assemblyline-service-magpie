@@ -1,0 +1,62 @@
+name: Magpie
+version: $SERVICE_TAG
+description: >
+  Static string extraction service that regex-scans file content for high-value indicators:
+  cryptocurrency wallet addresses (BTC/ETH/XMR), mining pool connection strings, IPv4/IPv6
+  addresses, onion addresses, email addresses, and credential patterns. Extracts and tags
+  dynamic IOCs that YARA-based services cannot capture.
+
+accepts: .*
+rejects: empty|metadata/.*
+
+stage: CORE
+category: Static Analysis
+
+file_required: true
+timeout: 60
+disable_cache: false
+
+enabled: true
+is_external: false
+licence_count: 0
+
+heuristics:
+  - heur_id: 1
+    name: Cryptocurrency Wallet Address
+    description: One or more cryptocurrency wallet addresses (Bitcoin, Ethereum, or Monero) were extracted from file content
+    filetype: "*"
+    score: 500
+    attack_id: [T1583]
+
+  - heur_id: 2
+    name: Mining Pool Connection
+    description: A stratum mining protocol connection string was found, indicating cryptocurrency mining capability
+    filetype: "*"
+    score: 750
+    attack_id: [T1496]
+
+  - heur_id: 3
+    name: Credential Pattern
+    description: Email address and password pattern found in combination, suggesting embedded or harvested credentials
+    filetype: "*"
+    score: 400
+    attack_id: [T1552]
+
+  - heur_id: 4
+    name: Suspicious IP and Port
+    description: An IP address with a port associated with cryptocurrency mining or known C2 activity was found
+    filetype: "*"
+    score: 300
+    attack_id: [T1071]
+
+  - heur_id: 5
+    name: Onion Address
+    description: A Tor onion address was found, commonly used for ransomware payment portals or anonymous C2
+    filetype: "*"
+    score: 500
+    attack_id: [T1090]
+
+docker_config:
+  image: ${REGISTRY}/assemblyline-service-magpie:$SERVICE_TAG
+  cpu_cores: 1.0
+  ram_mb: 512
