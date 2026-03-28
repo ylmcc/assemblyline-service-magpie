@@ -1,6 +1,7 @@
 import ipaddress
 import mmap
 import re
+from itertools import chain
 
 from assemblyline_v4_service.common.base import ServiceBase
 from assemblyline_v4_service.common.result import Result, ResultTableSection, TableRow
@@ -60,6 +61,11 @@ RE_USERPASS = re.compile(
     rb'(?<![A-Za-z0-9])([A-Za-z0-9._%+\-]{3,}):([^\s\x00@:]{4,})@([A-Za-z0-9.\-]{4,})'
 )
 
+# Printable ASCII string extractor (narrow, min 6 chars)
+RE_STRINGS_NARROW = re.compile(rb'[\x20-\x7e]{6,}')
+# Wide (UTF-16LE) string extractor
+RE_STRINGS_WIDE = re.compile(rb'(?:[\x20-\x7e]\x00){6,}')
+
 
 def _is_private_or_loopback(ip_str: str) -> bool:
     try:
@@ -89,9 +95,19 @@ class Magpie(ServiceBase):
 
         with open(request.file_path, 'rb') as f:
             try:
-                data = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+                raw = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
             except (ValueError, mmap.error):
-                data = f.read()
+                raw = f.read()
+
+        # Extract printable strings (narrow + wide) and join as a flat byte string
+        # separated by newlines so regexes don't stitch across string boundaries.
+        # This mirrors what `strings` does and avoids false positives from binary data.
+        narrow = (m.group(0) for m in RE_STRINGS_NARROW.finditer(raw))
+        wide = (m.group(0).replace(b'\x00', b'') for m in RE_STRINGS_WIDE.finditer(raw))
+        data = b'\n'.join(chain(narrow, wide))
+
+        if isinstance(raw, mmap.mmap):
+            raw.close()
 
         wallets = self._extract_wallets(data)
         stratum = self._extract_stratum(data)
