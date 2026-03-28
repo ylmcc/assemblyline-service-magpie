@@ -51,6 +51,31 @@ RE_ONION = re.compile(rb'(?<![A-Za-z0-9])([a-z2-7]{16,56}\.onion)(?::(\d{2,5}))?
 # Email addresses
 RE_EMAIL = re.compile(rb'[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}')
 
+# Domains — hostname with 2+ labels ending in a known TLD
+# Excludes file extensions and bare two-part names to reduce noise
+_TLDS = (
+    rb'com|net|org|io|ru|cn|de|uk|fr|br|jp|in|au|it|nl|ca|es|'
+    rb'kr|info|biz|gov|mil|edu|co|me|tv|cc|us|eu|sh|to|pw'
+)
+RE_DOMAIN = re.compile(
+    rb'(?<![A-Za-z0-9\-\.])'
+    rb'([A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?'
+    rb'(?:\.[A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?){1,}'
+    rb'\.(?:' + _TLDS + rb'))'
+    rb'(?![A-Za-z0-9\-\.])',
+    re.IGNORECASE,
+)
+
+# File extensions to suppress from domain results
+_DOMAIN_SUPPRESS_EXTS = {
+    'c', 'h', 'cpp', 'cc', 'py', 'rb', 'go', 'rs', 'js', 'ts',
+    'sh', 'bash', 'pl', 'php', 'java', 'kt', 'cs', 'so', 'a',
+    'o', 'obj', 'inc', 'asm', 's', 'txt', 'log', 'conf', 'cfg',
+    'ini', 'yml', 'yaml', 'xml', 'json', 'md', 'rst', 'html',
+    'htm', 'css', 'pem', 'crt', 'key', 'csr', 'cnf', 'service',
+    'local', 'arpa', 'lock', 'pid', 'tmp',
+}
+
 # Credential patterns — password= / passwd= / pwd= followed by non-whitespace value
 RE_CRED = re.compile(
     rb'(?i)(?:password|passwd|pwd)\s*[:=]\s*([^\s\x00\r\n"\']{4,})'
@@ -159,6 +184,7 @@ class Magpie(ServiceBase):
         creds = self._extract_credentials(data, emails)
         droppers = self._extract_droppers(data)
         cloud_meta = self._extract_cloud_meta(data)
+        domains = self._extract_domains(data, emails)
         cron = self._extract_cron_persist(data)
         systemd = self._extract_systemd_persist(data)
         backdoor = self._extract_passwd_backdoor(data)
@@ -230,6 +256,13 @@ class Magpie(ServiceBase):
             for url in cloud_meta:
                 section.add_row(TableRow(url=url))
                 section.add_tag("file.string.extracted", url)
+            result.add_section(section)
+
+        if domains:
+            section = ResultTableSection("Domains")
+            for domain in domains:
+                section.add_row(TableRow(domain=domain))
+                section.add_tag("network.static.domain", domain)
             result.add_section(section)
 
         if cron:
@@ -387,6 +420,25 @@ class Magpie(ServiceBase):
         results = []
         for m in RE_CLOUD_META.finditer(data):
             val = m.group(0).decode('utf-8', errors='ignore').strip()
+            if val not in seen:
+                seen.add(val)
+                results.append(val)
+        return results
+
+    def _extract_domains(self, data, emails: list[str]) -> list[str]:
+        # Build set of hosts already covered by email extraction
+        email_hosts = {e.split('@', 1)[1] for e in emails if '@' in e}
+        seen = set()
+        results = []
+        for m in RE_DOMAIN.finditer(data):
+            val = m.group(1).decode('ascii', errors='ignore').lower()
+            # Drop if last label is a suppressed file extension
+            ext = val.rsplit('.', 1)[-1]
+            if ext in _DOMAIN_SUPPRESS_EXTS:
+                continue
+            # Drop if it's just an email host we already have
+            if val in email_hosts:
+                continue
             if val not in seen:
                 seen.add(val)
                 results.append(val)
