@@ -1,7 +1,11 @@
+import hashlib
 import ipaddress
 import mmap
 import re
 from itertools import chain
+
+import base58 as _base58
+from bech32 import bech32_decode
 
 from assemblyline_v4_service.common.base import ServiceBase
 from assemblyline_v4_service.common.result import Result, ResultTableSection, TableRow
@@ -108,15 +112,20 @@ RE_CRON_PERSIST = re.compile(
     re.IGNORECASE,
 )
 
-# systemd service persistence: service file install + enable/start
+# systemd service persistence: embedded unit file or service install commands
 RE_SYSTEMD_PERSIST = re.compile(
-    rb'(?:systemctl\s+(?:enable|start|daemon-reload)\b[^\x00\n]*\.service|ExecStart\s*=)',
+    rb'(?:'
+    rb'systemctl\s+(?:enable|start|daemon-reload)\b[^\x00\n]*\.service'
+    rb'|ExecStart\s*='
+    rb'|WantedBy\s*=\s*\S+'
+    rb')',
     re.IGNORECASE,
 )
 
-# Backdoor UID 0 account: /etc/passwd-format entry with uid:gid = 0:0
+# Backdoor account: full /etc/passwd-format entry with crypt hash embedded in binary
+# Matches: user:$type$salt$hash:uid:gid:gecos:home:shell
 RE_PASSWD_BACKDOOR = re.compile(
-    rb'[A-Za-z0-9_\-]{2,32}:\$[0-9a-z]\$[A-Za-z0-9./]{1,16}\$[A-Za-z0-9./]{20,}:0:0:'
+    rb'[A-Za-z0-9_\-]{2,32}:\$[0-9a-z]\$[A-Za-z0-9./]{1,16}\$[A-Za-z0-9./]{20,}:\d+:\d+:[^:\x00]*:[^:\x00]+:[^\s\x00]+'
 )
 
 # su with piped password: echo 'pass' | su -c
@@ -128,10 +137,43 @@ RE_SU_PIPE = re.compile(
 # LD_PRELOAD rootkit: writing a shared library to /etc/ld.so.preload
 RE_LDPRELOAD = re.compile(rb'/etc/ld\.so\.preload', re.IGNORECASE)
 
+# RC/init script persistence: rc.local modification or SysV init registration
+RE_RC_PERSIST = re.compile(
+    rb'(?:/etc/rc\.local|/etc/init\.d/[A-Za-z0-9_\-]+|update-rc\.d\s+\S+|/etc/rc\d?\.d/)',
+    re.IGNORECASE,
+)
+
+# Container escape: Docker socket abuse, volume mount escape, or namespace escape
+RE_CONTAINER_ESCAPE = re.compile(
+    rb'(?:'
+    rb'docker\s+run\b[^\x00\n]*-v\s+/:/[^\x00\n]*chroot'
+    rb'|nsenter\s+-t\s+1\b'
+    rb'|/var/run/docker\.sock'
+    rb')',
+    re.IGNORECASE,
+)
+
 # Printable ASCII string extractor (narrow, min 6 chars)
 RE_STRINGS_NARROW = re.compile(rb'[\x20-\x7e]{6,}')
 # Wide (UTF-16LE) string extractor
 RE_STRINGS_WIDE = re.compile(rb'(?:[\x20-\x7e]\x00){6,}')
+
+
+def _valid_btc_legacy(addr: str) -> bool:
+    try:
+        decoded = _base58.b58decode(addr)
+        payload, checksum = decoded[:-4], decoded[-4:]
+        return hashlib.sha256(hashlib.sha256(payload).digest()).digest()[:4] == checksum
+    except Exception:
+        return False
+
+
+def _valid_btc_bech32(addr: str) -> bool:
+    try:
+        hrp, _ = bech32_decode(addr)
+        return hrp == 'bc'
+    except Exception:
+        return False
 
 
 def _is_private_or_loopback(ip_str: str) -> bool:
@@ -189,6 +231,8 @@ class Magpie(ServiceBase):
         systemd = self._extract_systemd_persist(data)
         backdoor = self._extract_passwd_backdoor(data)
         ldpreload = self._extract_ldpreload(data)
+        rc_persist = self._extract_rc_persist(data)
+        container_escape = self._extract_container_escape(data)
 
         if wallets:
             section = ResultTableSection("Cryptocurrency Wallets")
@@ -297,6 +341,22 @@ class Magpie(ServiceBase):
                 section.add_tag("file.string.extracted", entry)
             result.add_section(section)
 
+        if rc_persist:
+            section = ResultTableSection("RC/Init Script Persistence")
+            section.set_heuristic(12)
+            for entry in rc_persist:
+                section.add_row(TableRow(entry=entry))
+                section.add_tag("file.string.extracted", entry)
+            result.add_section(section)
+
+        if container_escape:
+            section = ResultTableSection("Container Escape")
+            section.set_heuristic(13)
+            for entry in container_escape:
+                section.add_row(TableRow(entry=entry))
+                section.add_tag("file.string.extracted", entry[:512])
+            result.add_section(section)
+
         if isinstance(data, mmap.mmap):
             data.close()
 
@@ -308,6 +368,9 @@ class Magpie(ServiceBase):
         for m in RE_BTC.finditer(data):
             addr = m.group(0).decode('ascii', errors='ignore')
             if addr not in seen:
+                valid = _valid_btc_bech32(addr) if addr.startswith('bc1') else _valid_btc_legacy(addr)
+                if not valid:
+                    continue
                 seen.add(addr)
                 results.append(("BTC", addr))
         for m in RE_ETH.finditer(data):
@@ -479,6 +542,26 @@ class Magpie(ServiceBase):
         seen = set()
         results = []
         for m in RE_LDPRELOAD.finditer(data):
+            val = m.group(0).decode('utf-8', errors='ignore').strip()
+            if val not in seen:
+                seen.add(val)
+                results.append(val)
+        return results
+
+    def _extract_rc_persist(self, data) -> list[str]:
+        seen = set()
+        results = []
+        for m in RE_RC_PERSIST.finditer(data):
+            val = m.group(0).decode('utf-8', errors='ignore').strip()
+            if val not in seen:
+                seen.add(val)
+                results.append(val)
+        return results
+
+    def _extract_container_escape(self, data) -> list[str]:
+        seen = set()
+        results = []
+        for m in RE_CONTAINER_ESCAPE.finditer(data):
             val = m.group(0).decode('utf-8', errors='ignore').strip()
             if val not in seen:
                 seen.add(val)

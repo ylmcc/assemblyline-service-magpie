@@ -5,7 +5,7 @@ ENV SERVICE_PATH magpie.Magpie
 USER root
 
 # Install dependencies
-# RUN pip install --no-cache-dir <your-dependencies>
+RUN pip install --no-cache-dir base58 bech32
 
 USER assemblyline
 
