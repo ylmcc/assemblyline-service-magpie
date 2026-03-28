@@ -6,7 +6,7 @@ An [Assemblyline 4](https://cybercentrecanada.github.io/assemblyline4_docs/) sta
 
 | Category | Detail | Heuristic | Score |
 |---|---|---|---|
-| Cryptocurrency wallets | Bitcoin (P2PKH, P2SH, bech32), Ethereum, Monero | 1 | 500 |
+| Cryptocurrency wallets | Bitcoin (P2PKH, P2SH, bech32 — checksum validated), Ethereum, Monero | 1 | 500 |
 | Mining pool connections | `stratum+tcp://` and `stratum+ssl://` URIs | 2 | 750 |
 | Credential patterns | `password=`, `passwd=`, `pwd=`, and `user:pass@host` | 3 | 400 |
 | Suspicious IPs | Public IPv4/IPv6 with known mining or C2 ports | 4 | 300 |
