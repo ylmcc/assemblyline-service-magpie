@@ -73,6 +73,36 @@ RE_CLOUD_META = re.compile(
     re.IGNORECASE,
 )
 
+# Cron persistence: crontab modification or raw cron expression writing
+RE_CRON_PERSIST = re.compile(
+    rb'(?:'
+    rb'\(\s*crontab\s+-l[^\x00\n]+\|\s*crontab\s+-'
+    rb"|echo\s+['\"][^'\"]*\*\s+\*\s+\*[^'\"]*['\"]\s*>>"
+    rb'|\*\s+\*\s+\*\s+\*\s+\*\s+root\s+\S+'
+    rb')',
+    re.IGNORECASE,
+)
+
+# systemd service persistence: service file install + enable/start
+RE_SYSTEMD_PERSIST = re.compile(
+    rb'(?:systemctl\s+(?:enable|start|daemon-reload)\b[^\x00\n]*\.service|ExecStart\s*=)',
+    re.IGNORECASE,
+)
+
+# Backdoor UID 0 account: /etc/passwd-format entry with uid:gid = 0:0
+RE_PASSWD_BACKDOOR = re.compile(
+    rb'[A-Za-z0-9_\-]{2,32}:\$[0-9a-z]\$[A-Za-z0-9./]{1,16}\$[A-Za-z0-9./]{20,}:0:0:'
+)
+
+# su with piped password: echo 'pass' | su -c
+RE_SU_PIPE = re.compile(
+    rb"echo\s+['\"][^'\"]{3,}['\"]\s*\|\s*su\s+-c\b",
+    re.IGNORECASE,
+)
+
+# LD_PRELOAD rootkit: writing a shared library to /etc/ld.so.preload
+RE_LDPRELOAD = re.compile(rb'/etc/ld\.so\.preload', re.IGNORECASE)
+
 # Printable ASCII string extractor (narrow, min 6 chars)
 RE_STRINGS_NARROW = re.compile(rb'[\x20-\x7e]{6,}')
 # Wide (UTF-16LE) string extractor
@@ -129,6 +159,10 @@ class Magpie(ServiceBase):
         creds = self._extract_credentials(data, emails)
         droppers = self._extract_droppers(data)
         cloud_meta = self._extract_cloud_meta(data)
+        cron = self._extract_cron_persist(data)
+        systemd = self._extract_systemd_persist(data)
+        backdoor = self._extract_passwd_backdoor(data)
+        ldpreload = self._extract_ldpreload(data)
 
         if wallets:
             section = ResultTableSection("Cryptocurrency Wallets")
@@ -152,7 +186,7 @@ class Magpie(ServiceBase):
             if has_suspicious:
                 section.set_heuristic(4)
             for ip, port, suspicious in ips:
-                row = TableRow(ip=ip, port=port or "", suspicious="yes" if suspicious else "no")
+                row = TableRow(ip=ip, port=port or "")
                 section.add_row(row)
                 section.add_tag("network.static.ip", ip)
                 if port:
@@ -196,6 +230,38 @@ class Magpie(ServiceBase):
             for url in cloud_meta:
                 section.add_row(TableRow(url=url))
                 section.add_tag("file.string.extracted", url)
+            result.add_section(section)
+
+        if cron:
+            section = ResultTableSection("Cron Persistence")
+            section.set_heuristic(8)
+            for entry in cron:
+                section.add_row(TableRow(command=entry))
+                section.add_tag("file.string.extracted", entry[:512])
+            result.add_section(section)
+
+        if systemd:
+            section = ResultTableSection("Systemd Service Persistence")
+            section.set_heuristic(9)
+            for entry in systemd:
+                section.add_row(TableRow(entry=entry))
+                section.add_tag("file.string.extracted", entry[:512])
+            result.add_section(section)
+
+        if backdoor:
+            section = ResultTableSection("Backdoor Account")
+            section.set_heuristic(10)
+            for entry in backdoor:
+                section.add_row(TableRow(entry=entry))
+                section.add_tag("file.string.extracted", entry)
+            result.add_section(section)
+
+        if ldpreload:
+            section = ResultTableSection("LD_PRELOAD Rootkit")
+            section.set_heuristic(11)
+            for entry in ldpreload:
+                section.add_row(TableRow(entry=entry))
+                section.add_tag("file.string.extracted", entry)
             result.add_section(section)
 
         if isinstance(data, mmap.mmap):
@@ -320,6 +386,47 @@ class Magpie(ServiceBase):
         seen = set()
         results = []
         for m in RE_CLOUD_META.finditer(data):
+            val = m.group(0).decode('utf-8', errors='ignore').strip()
+            if val not in seen:
+                seen.add(val)
+                results.append(val)
+        return results
+
+    def _extract_cron_persist(self, data) -> list[str]:
+        seen = set()
+        results = []
+        for m in RE_CRON_PERSIST.finditer(data):
+            val = m.group(0).decode('utf-8', errors='ignore').strip()
+            if val not in seen:
+                seen.add(val)
+                results.append(val)
+        return results
+
+    def _extract_systemd_persist(self, data) -> list[str]:
+        seen = set()
+        results = []
+        for m in RE_SYSTEMD_PERSIST.finditer(data):
+            val = m.group(0).decode('utf-8', errors='ignore').strip()
+            if val not in seen:
+                seen.add(val)
+                results.append(val)
+        return results
+
+    def _extract_passwd_backdoor(self, data) -> list[str]:
+        seen = set()
+        results = []
+        for pattern in (RE_PASSWD_BACKDOOR, RE_SU_PIPE):
+            for m in pattern.finditer(data):
+                val = m.group(0).decode('utf-8', errors='ignore').strip()
+                if val not in seen:
+                    seen.add(val)
+                    results.append(val)
+        return results
+
+    def _extract_ldpreload(self, data) -> list[str]:
+        seen = set()
+        results = []
+        for m in RE_LDPRELOAD.finditer(data):
             val = m.group(0).decode('utf-8', errors='ignore').strip()
             if val not in seen:
                 seen.add(val)
