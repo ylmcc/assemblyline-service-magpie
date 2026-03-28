@@ -34,7 +34,7 @@ RE_STRATUM = re.compile(rb'stratum\+(?:tcp|ssl)://[^\s\x00"\'<>]{6,}', re.IGNORE
 
 # IPv4 with optional port
 RE_IPV4 = re.compile(
-    rb'(?<!\d)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::(\d{2,5}))?(?!\d)'
+    rb'(?<![.\d])(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::(\d{2,5}))?(?![.\d])'
 )
 
 # IPv6 — full, compressed, and bracketed-with-port forms
@@ -56,9 +56,21 @@ RE_CRED = re.compile(
     rb'(?i)(?:password|passwd|pwd)\s*[:=]\s*([^\s\x00\r\n"\']{4,})'
 )
 
-# user:pass@host style (min lengths to reduce noise)
+# user:pass@host style — password restricted to alphanumeric + common credential chars
 RE_USERPASS = re.compile(
-    rb'(?<![A-Za-z0-9])([A-Za-z0-9._%+\-]{3,}):([^\s\x00@:]{4,})@([A-Za-z0-9.\-]{4,})'
+    rb'(?<![A-Za-z0-9])([A-Za-z0-9._%+\-]{3,}):([A-Za-z0-9!#$%&*+/=^_~.\-]{4,})@([A-Za-z0-9.\-]{4,}\.[A-Za-z0-9\-]{2,})'
+)
+
+# Shell dropper: wget/curl (with or without literal URL) + chmod +x on same line
+RE_DROPPER = re.compile(
+    rb'(?:busybox\s+)?(?:wget|curl)\b[^\x00\n]{5,}chmod\s+\+x',
+    re.IGNORECASE,
+)
+
+# Cloud instance metadata API access — credential theft from AWS/Azure/GCP IMDS
+RE_CLOUD_META = re.compile(
+    rb'http://169\.254\.169\.254/(?:latest/meta-data|metadata|computeMetadata)[^\s\x00]*',
+    re.IGNORECASE,
 )
 
 # Printable ASCII string extractor (narrow, min 6 chars)
@@ -115,6 +127,8 @@ class Magpie(ServiceBase):
         onions = self._extract_onions(data)
         emails = self._extract_emails(data)
         creds = self._extract_credentials(data, emails)
+        droppers = self._extract_droppers(data)
+        cloud_meta = self._extract_cloud_meta(data)
 
         if wallets:
             section = ResultTableSection("Cryptocurrency Wallets")
@@ -166,6 +180,22 @@ class Magpie(ServiceBase):
             for cred_type, value in creds:
                 section.add_row(TableRow(type=cred_type, value=value))
                 section.add_tag("file.string.extracted", value)
+            result.add_section(section)
+
+        if droppers:
+            section = ResultTableSection("Shell Dropper Commands")
+            section.set_heuristic(6)
+            for cmd in droppers:
+                section.add_row(TableRow(command=cmd))
+                section.add_tag("file.string.extracted", cmd[:512])
+            result.add_section(section)
+
+        if cloud_meta:
+            section = ResultTableSection("Cloud Metadata API Access")
+            section.set_heuristic(7)
+            for url in cloud_meta:
+                section.add_row(TableRow(url=url))
+                section.add_tag("file.string.extracted", url)
             result.add_section(section)
 
         if isinstance(data, mmap.mmap):
@@ -263,8 +293,8 @@ class Magpie(ServiceBase):
                 seen.add(val)
                 results.append(("password", val))
 
-        # user:pass@host — only emit if emails were also found or stratum context nearby
-        if emails or RE_STRATUM.search(data):
+        # user:pass@host — only emit in stratum context (mining credentials)
+        if RE_STRATUM.search(data):
             for m in RE_USERPASS.finditer(data):
                 user = m.group(1).decode('utf-8', errors='ignore')
                 password = m.group(2).decode('utf-8', errors='ignore')
@@ -274,4 +304,24 @@ class Magpie(ServiceBase):
                     seen.add(val)
                     results.append(("user:pass@host", val))
 
+        return results
+
+    def _extract_droppers(self, data) -> list[str]:
+        seen = set()
+        results = []
+        for m in RE_DROPPER.finditer(data):
+            val = m.group(0).decode('utf-8', errors='ignore').strip()
+            if val not in seen:
+                seen.add(val)
+                results.append(val)
+        return results
+
+    def _extract_cloud_meta(self, data) -> list[str]:
+        seen = set()
+        results = []
+        for m in RE_CLOUD_META.finditer(data):
+            val = m.group(0).decode('utf-8', errors='ignore').strip()
+            if val not in seen:
+                seen.add(val)
+                results.append(val)
         return results
