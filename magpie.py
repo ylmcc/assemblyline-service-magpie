@@ -2,7 +2,10 @@ import hashlib
 import ipaddress
 import mmap
 import re
+import tempfile
 from itertools import chain
+
+import requests as _requests
 
 import base58 as _base58
 from bech32 import bech32_decode
@@ -137,6 +140,9 @@ RE_SU_PIPE = re.compile(
 # LD_PRELOAD rootkit: writing a shared library to /etc/ld.so.preload
 RE_LDPRELOAD = re.compile(rb'/etc/ld\.so\.preload', re.IGNORECASE)
 
+# HTTP/HTTPS URLs
+RE_URL = re.compile(rb"https?://[^\s\x00\"'<>{}\[\]]{8,}", re.IGNORECASE)
+
 # RC/init script persistence: rc.local modification or SysV init registration
 RE_RC_PERSIST = re.compile(
     rb'(?:/etc/rc\.local|/etc/init\.d/[A-Za-z0-9_\-]+|update-rc\.d\s+\S+|/etc/rc\d?\.d/)',
@@ -233,6 +239,8 @@ class Magpie(ServiceBase):
         ldpreload = self._extract_ldpreload(data)
         rc_persist = self._extract_rc_persist(data)
         container_escape = self._extract_container_escape(data)
+        urls = self._extract_urls(data)
+        fetched = self._fetch_url_payloads(request, urls) if urls else []
 
         if wallets:
             section = ResultTableSection("Cryptocurrency Wallets")
@@ -339,6 +347,14 @@ class Magpie(ServiceBase):
             for entry in ldpreload:
                 section.add_row(TableRow(entry=entry))
                 section.add_tag("file.string.extracted", entry)
+            result.add_section(section)
+
+        if urls:
+            section = ResultTableSection("URLs")
+            for url in urls:
+                dl = any(u == url for u, _ in fetched)
+                section.add_row(TableRow(url=url, fetched="yes" if dl else "no"))
+                section.add_tag("network.static.uri", url)
             result.add_section(section)
 
         if rc_persist:
@@ -547,6 +563,33 @@ class Magpie(ServiceBase):
                 seen.add(val)
                 results.append(val)
         return results
+
+    def _extract_urls(self, data) -> list[str]:
+        seen = set()
+        results = []
+        for m in RE_URL.finditer(data):
+            url = m.group(0).decode('utf-8', errors='ignore').strip()
+            if url not in seen:
+                seen.add(url)
+                results.append(url)
+        return results
+
+    def _fetch_url_payloads(self, request, urls: list[str]) -> list[tuple[str, str]]:
+        fetched = []
+        for url in urls:
+            try:
+                resp = _requests.get(url, timeout=10, verify=False)
+                if resp.status_code != 200 or not resp.content:
+                    continue
+                filename = url.rstrip('/').split('/')[-1] or 'payload'
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix='_' + filename)
+                tmp.write(resp.content)
+                tmp.close()
+                request.add_extracted(tmp.name, filename, f"Payload fetched from {url}")
+                fetched.append((url, filename))
+            except Exception:
+                pass
+        return fetched
 
     def _extract_rc_persist(self, data) -> list[str]:
         seen = set()
