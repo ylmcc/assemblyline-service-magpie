@@ -57,8 +57,19 @@ RE_IPV6_CANDIDATE = re.compile(
     rb'(?![A-Za-z0-9:])'
 )
 
-# Onion addresses (v2: 16 chars, v3: 56 chars)
-RE_ONION = re.compile(rb'(?<![A-Za-z0-9])([a-z2-7]{16,56}\.onion)(?::(\d{2,5}))?', re.IGNORECASE)
+# Onion addresses -- v2 is exactly 16 chars, v3 is exactly 56 chars, never in
+# between. Must be an exact-length alternation, not a {16,56} range: a range lets
+# any packed run of base32-charset bytes of ANY length in that window match, which
+# is exactly what a Go binary's unbroken string-constant soup looks like (Go
+# stdlib's `net` package embeds its own ".onion" TLD-handling constant amid a run
+# of other packed keywords with no separator bytes between them -- confirmed via a
+# real sample where a 40-char non-onion run matched under the old range). The
+# existing (?<![A-Za-z0-9]) lookbehind already prevents matching a sub-window of a
+# longer unbroken run, so exact-length alone is sufficient.
+RE_ONION = re.compile(
+    rb'(?<![A-Za-z0-9])((?:[a-z2-7]{56}|[a-z2-7]{16})\.onion)(?::(\d{2,5}))?',
+    re.IGNORECASE,
+)
 
 # Email addresses
 RE_EMAIL = re.compile(rb'[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}')
@@ -90,9 +101,14 @@ RE_PASTEBIN_RAW = re.compile(rb'https?://(?:www\.)?pastebin\.com/raw/[A-Za-z0-9]
 # Credential patterns
 # ---------------------------------------------------------------------------
 
-# password= / passwd= / pwd= followed by non-whitespace value
+# password= / passwd= followed by non-whitespace value. Deliberately excludes
+# bare "pwd" -- confirmed via a real sample that it collides with the extremely
+# common $PWD (present working directory) environment variable, e.g. a plain
+# "PWD=/home/user" line in an env dump or .bashrc would otherwise be reported as
+# a leaked credential. Value capped at 32 chars so a rare genuine hit sitting
+# next to more packed-string garbage (see RE_ONION comment) doesn't run away.
 RE_CRED = re.compile(
-    rb'(?i)(?:password|passwd|pwd)\s*[:=]\s*([^\s\x00\r\n"\']{4,})'
+    rb'(?i)\b(?:password|passwd)\s*[:=]\s*([^\s\x00\r\n"\']{4,32})'
 )
 
 # user:pass@host style -- password restricted to alphanumeric + common credential chars
@@ -129,6 +145,36 @@ RE_PDB_PATH = re.compile(
     rb'(?P<pdbname>[^\\/:*?"<>|\r\n\x00]{1,120}\.pdb)\b',
     re.IGNORECASE,
 )
+
+# Go build-machine source paths -- the Linux/macOS analogue of a PDB leak. Go
+# binaries embed absolute source paths of the build machine (via pclntab/DWARF
+# line tables) unless built with -trimpath, and just as revealing of the
+# project/author's directory naming as a PDB path. `project` captures the
+# directory immediately containing the .go file (e.g. for
+# "/root/eclipse-c2/eclipse-c2/bot_client.go" -> "eclipse-c2").
+RE_GO_BUILD_PATH = re.compile(
+    rb'(?<![\w/])(/(?:[\w.\-]+/)+(?P<project>[\w.\-]+)/[\w.\-]+\.go)\b'
+)
+
+# Every Go binary embeds hundreds of these (toolchain/stdlib/module-cache) --
+# not informative about the malware's own project, filtered out in extraction.
+GO_NOISE_PATH_MARKERS = (
+    b"/usr/local/go/", b"/usr/lib/go", b"/pkg/mod/", b"/go/pkg/",
+    b"/src/runtime/", b"/src/internal/", b"/src/vendor/", b"/src/cmd/",
+    b"/.gvm/", b"/goroot/",
+)
+
+# Project-path keywords strongly associated with malicious tooling -- boosts the
+# score when the leaked build path itself names the project this way (e.g.
+# ".../eclipse-c2/bot_client.go"). Matched with boundary-awareness in
+# extraction.py so short entries like "c2" don't fire on incidental substrings
+# like "sync2"/"func2".
+SUSPICIOUS_PROJECT_KEYWORDS = frozenset({
+    b"c2", b"rat", b"bot", b"backdoor", b"implant", b"stager", b"loader",
+    b"dropper", b"keylog", b"rootkit", b"trojan", b"stealer", b"exfil",
+    b"payload", b"malware", b"miner", b"botnet", b"ddos", b"exploit",
+    b"phish", b"beacon", b"shellcode", b"ransom", b"worm", b"cobaltstrike",
+})
 
 # Curated dangerous Win32 API name strings, grouped so combo-aware scoring can
 # down-weight low-signal-alone categories (see extraction.py/magpie.py). These

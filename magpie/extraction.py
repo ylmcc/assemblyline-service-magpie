@@ -260,6 +260,53 @@ def extract_pdb_paths(data: bytes) -> list[tuple[str, str]]:
     return results
 
 
+def _has_suspicious_keyword(haystack: bytes) -> bool:
+    """Boundary-aware substring check against SUSPICIOUS_PROJECT_KEYWORDS -- a
+    keyword must be flanked by a non-alphanumeric byte or a string edge, so a
+    short entry like b"c2" matches ".../eclipse-c2/..." but not "sync2.go"."""
+    lowered = haystack.lower()
+    for kw in p.SUSPICIOUS_PROJECT_KEYWORDS:
+        start = 0
+        while True:
+            idx = lowered.find(kw, start)
+            if idx == -1:
+                break
+            end = idx + len(kw)
+            before_ok = idx == 0 or not lowered[idx - 1:idx].isalnum()
+            after_ok = end == len(lowered) or not lowered[end:end + 1].isalnum()
+            if before_ok and after_ok:
+                return True
+            start = idx + 1
+    return False
+
+
+def extract_go_build_paths(data: bytes) -> list[tuple[str, str, bool]]:
+    """Returns (full_path, project_dir, suspicious) -- Go's analogue of a PDB
+    leak. Filters out Go toolchain/stdlib/module-cache noise (every Go binary
+    embeds hundreds of those) and caps output since a real project can have many
+    source files; we only need to demonstrate the leak once the project name is
+    known."""
+    seen = set()
+    results = []
+    for m in p.RE_GO_BUILD_PATH.finditer(data):
+        full = m.group(1)
+        if any(marker in full for marker in p.GO_NOISE_PATH_MARKERS):
+            continue
+        if full in seen:
+            continue
+        seen.add(full)
+        project = m.group('project')
+        suspicious = _has_suspicious_keyword(project + b'/' + full)
+        results.append((
+            full.decode('utf-8', errors='ignore'),
+            project.decode('utf-8', errors='ignore'),
+            suspicious,
+        ))
+        if len(results) >= 25:
+            break
+    return results
+
+
 def extract_win32_apis(data: bytes) -> dict[str, set[str]]:
     """category -> set of matched API names found. Scoring/combo-awareness (e.g.
     not scoring 'dynamic_resolution' alone) is an orchestration decision made by

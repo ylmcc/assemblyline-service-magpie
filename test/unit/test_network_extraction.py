@@ -144,6 +144,19 @@ def test_onion_v2_extracted():
     assert extract_onions(val.encode()) == [val]
 
 
+def test_onion_length_must_be_exact_not_a_range():
+    # Regression: a real Go ARM ELF sample's Magpie result reported
+    # "bytestringnetdnsdomaingophertelnetlisten.onion" (40 chars) as a Tor
+    # address. That string is Go's own net package's packed resolver-keyword /
+    # ".onion"-TLD-handling constants (Go binaries pack string constants with no
+    # delimiter bytes between them) -- not a real onion address. Real Tor
+    # addresses are exactly 16 (v2) or 56 (v3) chars, never in between, so a
+    # {16,56} *range* incorrectly matched this. Any other length must not match.
+    for length in (17, 30, 40, 55):
+        val = "a" * length + ".onion"
+        assert extract_onions(val.encode()) == [], f"length {length} should not match"
+
+
 def test_email_extracted():
     assert extract_emails(b"contact: person@example.com") == ["person@example.com"]
 

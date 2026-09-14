@@ -4,6 +4,7 @@ from magpie.extraction import (
     extract_antivm_strings,
     extract_credentials,
     extract_droppers,
+    extract_go_build_paths,
     extract_pdb_paths,
     extract_ransom_language,
     extract_staging_paths,
@@ -143,6 +144,56 @@ def test_credential_userpass_at_host_only_in_stratum_context():
         b"stratum+tcp://pool.example:3333\nadmin:hunter2pass@example.com"
     )
     assert any(t == "userpass_at_host" for t, _ in with_stratum)
+
+
+def test_bare_pwd_env_var_not_treated_as_credential():
+    # Regression: a real Go ARM ELF sample's Magpie result reported
+    # "PATH3125Atoi-Inf+InfquitJuneJuly" as a leaked "generic_password_kv"
+    # credential. The actual raw bytes were "...PWD=PATH3125Atoi-Inf+InfquitJune
+    # July as hour in /etc..." -- Go's own PWD env-var-name constant, packed with
+    # zero delimiter bytes against unrelated stdlib string constants (strconv,
+    # time month names). Bare "pwd" is too ambiguous a keyword (collides with the
+    # extremely common $PWD env var) and was dropped in favour of just
+    # "password"/"passwd".
+    creds = extract_credentials(b"PWD=/home/user")
+    assert creds == []
+
+
+# ---------------------------------------------------------------------------
+# Go build path leaks
+# ---------------------------------------------------------------------------
+
+def test_go_build_path_with_suspicious_project_name():
+    # Structurally the same shape as the real finding that prompted this feature
+    # (a live sample embedded "/root/eclipse-c2/eclipse-c2/bot_client.go") but
+    # not the literal string, per house convention of not replaying a real
+    # sample's exact strings verbatim in committed test fixtures.
+    val = "/root/shadow-c2/shadow-c2/bot_client.go"
+    found = extract_go_build_paths(val.encode())
+    assert found == [(val, "shadow-c2", True)]
+
+
+def test_go_build_path_benign_project_not_flagged_suspicious():
+    val = "/home/dev/proj/main.go"
+    found = extract_go_build_paths(val.encode())
+    assert found == [(val, "proj", False)]
+
+
+def test_go_build_path_stdlib_noise_filtered_out():
+    assert extract_go_build_paths(b"/usr/local/go/src/runtime/proc.go") == []
+    assert extract_go_build_paths(b"/root/go/pkg/mod/github.com/foo/bar.go") == []
+
+
+def test_go_build_path_keyword_boundary_avoids_incidental_substrings():
+    # "sync2"/"func2" contain "c2" as a substring but must not be flagged --
+    # SUSPICIOUS_PROJECT_KEYWORDS matching is boundary-aware.
+    val = "/home/dev/sync2/main.go"
+    found = extract_go_build_paths(val.encode())
+    assert found == [(val, "sync2", False)]
+
+
+def test_no_go_build_path_on_benign_text():
+    assert extract_go_build_paths(b"just a normal string, nothing here") == []
 
 
 # ---------------------------------------------------------------------------

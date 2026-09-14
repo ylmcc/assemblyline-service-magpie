@@ -10,7 +10,7 @@ An [Assemblyline 4](https://cybercentrecanada.github.io/assemblyline4_docs/) sta
 |---|---|---|---|
 | Cryptocurrency wallets | Bitcoin (P2PKH, P2SH, bech32), Ethereum, Monero | 1 | 500 |
 | Mining pool connections | `stratum+tcp://` and `stratum+ssl://` URIs | 2 | 750 |
-| Credential patterns | `password=`/`passwd=`/`pwd=` (100, placeholder values suppressed) and `user:pass@host` (400) | 3 | 100 / 400 |
+| Credential patterns | `password=`/`passwd=` (100, placeholder values suppressed) and `user:pass@host` (400) | 3 | 100 / 400 |
 | Suspicious IPs | Public IPv4/IPv6 with known mining or C2 ports | 4 | 300 |
 | Onion addresses | Tor v2 and v3 `.onion` addresses | 5 | 500 |
 | Shell dropper commands | `wget`/`curl` + `chmod +x` on the same line | 6 | 500 |
@@ -20,6 +20,7 @@ An [Assemblyline 4](https://cybercentrecanada.github.io/assemblyline4_docs/) sta
 | Anti-VM / anti-sandbox artifacts | VMware/VBox/Sandboxie/QEMU-style strings | 10 | 150 |
 | Modern C2/exfil channels | Discord webhook URLs, Telegram bot URLs/tokens, pastebin raw links | 11 | 250-450 |
 | Ransom note language | Ransom-note-shaped phrases, scored higher when paired with a wallet/onion hit | 12 | 150 / 500 |
+| Go build path leaks | Absolute Go source paths (Linux/macOS analogue of a PDB leak), scored higher when the project directory name matches known C2/malware-tooling terms | 13 | 100 / 450 |
 | Email addresses | RFC-style email addresses (informational, no score) | — | — |
 | Suspicious staging/drop paths | `/dev/shm/`, `/var/tmp/`, `AppData\Local\Temp\`, etc. (informational, no score) | — | — |
 | User-Agent strings | Hardcoded HTTP User-Agent strings (informational, no score) | — | — |
@@ -28,7 +29,9 @@ An [Assemblyline 4](https://cybercentrecanada.github.io/assemblyline4_docs/) sta
 
 Rather than scanning raw binary bytes (which produces false positives), Magpie first extracts printable strings from the file — both narrow (ASCII) and wide (UTF-16LE) — mirroring the behaviour of the Unix `strings` command. All pattern matching is then performed against the extracted strings only.
 
-This approach correctly handles files where strings are stored as plaintext in the binary (PE resources, ELF `.rodata`, scripts) and avoids false positives from binary data coincidentally matching IP or credential patterns.
+This approach correctly handles files where strings are stored as plaintext in the binary (PE resources, ELF `.rodata`, scripts) and avoids false positives from arbitrary non-printable binary data coincidentally matching IP or credential patterns.
+
+It does **not** fully protect against a related but distinct issue: Go binaries pack many short, unrelated string constants back-to-back with no delimiter bytes between them (Go strings are length-prefixed internally, not null-terminated), so a pattern that isn't strict about exact expected length or exact keyword boundaries can accidentally splice adjacent unrelated constants into a false match (confirmed on a real sample: Go's own `net` package's internal `.onion`-TLD-handling constant, packed next to unrelated resolver keywords, produced a 40-character non-address string that satisfied an overly loose `{16,56}`-length onion regex). Patterns that scan packed binary string tables should prefer exact-length/boundary-anchored matching over ranges where the real-world target format has a fixed shape.
 
 IPv6 detection is a two-stage design: a coarse regex locates candidate spans (deliberately over-matching), then `ipaddress.ip_address()` validates and normalizes each candidate — this avoids the truncation bugs a single monolithic "handle every compression form" regex is prone to.
 
