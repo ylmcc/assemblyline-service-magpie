@@ -1,0 +1,6 @@
+Dockerfile
+.venv
+venv
+.idea
+.git
+test

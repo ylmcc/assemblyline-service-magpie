@@ -1,10 +1,15 @@
 name: Magpie
 version: $SERVICE_TAG
 description: >
-  Static string extraction service that regex-scans file content for high-value indicators:
-  cryptocurrency wallet addresses (BTC/ETH/XMR), mining pool connection strings, IPv4/IPv6
-  addresses, onion addresses, email addresses, and credential patterns. Extracts and tags
-  dynamic IOCs that YARA-based services cannot capture.
+  Static string extraction service that regex-scans printable strings (narrow ASCII +
+  wide UTF-16LE) from ANY file type for high-value malware artifacts: cryptocurrency
+  wallets, mining pool connections, network IOCs (IPv4/IPv6, onion addresses), C2/exfil
+  channels (Discord webhooks, Telegram bots, pastebin), credential patterns, cloud
+  metadata (IMDS) access, shell dropper commands, and -- since Magpie is the only one
+  of this author's AL4 services that ever sees compiled binaries -- PE-specific
+  artifacts: PDB debug paths, dangerous Win32 API name strings (process injection,
+  anti-debug, credential access), anti-VM/anti-sandbox strings, and ransom-note-shaped
+  language.
 
 accepts: .*
 rejects: empty|metadata/.*
@@ -24,39 +29,108 @@ heuristics:
   - heur_id: 1
     name: Cryptocurrency Wallet Address
     description: One or more cryptocurrency wallet addresses (Bitcoin, Ethereum, or Monero) were extracted from file content
-    filetype: "*"
+    filetype: ".*"
     score: 500
     attack_id: [T1583]
 
   - heur_id: 2
     name: Mining Pool Connection
     description: A stratum mining protocol connection string was found, indicating cryptocurrency mining capability
-    filetype: "*"
+    filetype: ".*"
     score: 750
     attack_id: [T1496]
 
   - heur_id: 3
     name: Credential Pattern
-    description: Email address and password pattern found in combination, suggesting embedded or harvested credentials
-    filetype: "*"
-    score: 400
+    description: A credential-shaped string was extracted (generic key=value password, or a structured user:pass@host)
+    filetype: ".*"
+    score: 100
+    max_score: 500
+    signature_score_map:
+      generic_password_kv: 100
+      userpass_at_host: 400
     attack_id: [T1552]
 
   - heur_id: 4
     name: Suspicious IP and Port
     description: An IP address with a port associated with cryptocurrency mining or known C2 activity was found
-    filetype: "*"
+    filetype: ".*"
     score: 300
     attack_id: [T1071]
 
   - heur_id: 5
     name: Onion Address
     description: A Tor onion address was found, commonly used for ransomware payment portals or anonymous C2
-    filetype: "*"
+    filetype: ".*"
     score: 500
     attack_id: [T1090]
 
+  - heur_id: 6
+    name: Shell Dropper Command
+    description: A wget/curl download combined with chmod +x on the same line was found, matching a classic Linux dropper pattern
+    filetype: ".*"
+    score: 500
+    attack_id: [T1105]
+
+  - heur_id: 7
+    name: Cloud Metadata (IMDS) Access
+    description: A hardcoded reference to the AWS/Azure/GCP instance metadata service was found, suggesting cloud credential theft
+    filetype: ".*"
+    score: 600
+    attack_id: [T1552.005]
+
+  - heur_id: 8
+    name: PDB Debug Path Leak
+    description: A Windows PDB debug symbol path was extracted, potentially leaking the build machine username/project/directory structure
+    filetype: ".*"
+    score: 100
+
+  - heur_id: 9
+    name: Suspicious Win32 API Usage
+    description: Curated dangerous Win32 API name strings were extracted (process injection, anti-debug/anti-VM, credential access, hooking, or dynamic API resolution)
+    filetype: ".*"
+    score: 50
+    max_score: 500
+    signature_score_map:
+      process_injection: 300
+      credential_access: 300
+      hooking: 150
+      anti_debug_anti_vm: 100
+      dynamic_resolution: 50
+    attack_id: [T1055, T1497]
+
+  - heur_id: 10
+    name: Anti-VM / Anti-Sandbox Artifact
+    description: Strings referencing known virtualization/sandbox products or default sandbox artifacts were found
+    filetype: ".*"
+    score: 150
+    attack_id: [T1497]
+
+  - heur_id: 11
+    name: Modern C2/Exfil Channel
+    description: A Discord webhook URL, Telegram bot API URL/token, or pastebin raw link was extracted -- common commodity stealer/RAT exfil channels
+    filetype: ".*"
+    score: 100
+    max_score: 500
+    signature_score_map:
+      discord_webhook: 450
+      telegram_bot: 400
+      pastebin_raw: 250
+    attack_id: [T1102, T1567]
+
+  - heur_id: 12
+    name: Ransom Note Language
+    description: Ransom-note-shaped phrases were extracted, optionally paired with a co-occurring wallet or onion address as payment evidence
+    filetype: ".*"
+    score: 150
+    max_score: 500
+    signature_score_map:
+      ransom_language_only: 150
+      ransom_with_payment_evidence: 500
+    attack_id: [T1486]
+
 docker_config:
-  image: ${REGISTRY}/assemblyline-service-magpie:$SERVICE_TAG
+  image: kylemc54321/assemblyline-service-magpie:$SERVICE_TAG
   cpu_cores: 1.0
+  ram_mb_min: 128
   ram_mb: 512

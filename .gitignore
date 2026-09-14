@@ -37,6 +37,7 @@ htmlcov/
 .DS_Store
 
 # Assemblyline dev artifacts
-*.json
-!package.json
 working_dir/
+
+# Docker Hub auto-increment script -- kept locally, not tracked in the repo
+push.sh

