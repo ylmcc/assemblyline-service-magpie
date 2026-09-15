@@ -112,9 +112,23 @@ def test_ipv4_public_address_without_mining_port_not_suspicious():
 # ---------------------------------------------------------------------------
 
 def test_btc_wallet_extracted():
-    placeholder = "1" + "A" * 33  # valid base58 charset, clearly not a real funded address
+    # A structurally valid (real Base58Check checksum) P2PKH address, built from an
+    # obviously-synthetic payload (version byte + sequential bytes 0x00..0x13) rather
+    # than any real-world address -- extract_wallets now validates the checksum, so a
+    # plain base58-alphabet placeholder of the right length (the old fixture here) no
+    # longer passes, on purpose.
+    valid_synthetic_address = "112D2adLM3UKy4Z4giRbReR6gjWuvHUqB"
+    wallets = extract_wallets(valid_synthetic_address.encode())
+    assert ("BTC", valid_synthetic_address) in wallets
+
+
+def test_btc_wallet_with_bad_checksum_rejected():
+    # Same shape/length/alphabet as a real P2PKH address, but not checksum-valid --
+    # confirms extract_wallets rejects base58-shaped garbage instead of just matching
+    # on shape, which is exactly the false-positive class this validation closes.
+    placeholder = "1" + "A" * 33
     wallets = extract_wallets(placeholder.encode())
-    assert ("BTC", placeholder) in wallets
+    assert ("BTC", placeholder) not in wallets
 
 
 def test_eth_wallet_extracted():

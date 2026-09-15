@@ -5,10 +5,100 @@ raw content, mirroring what `strings` does.
 """
 from __future__ import annotations
 
+import hashlib
 import ipaddress
 from itertools import chain
 
 from . import patterns as p
+
+# ---------------------------------------------------------------------------
+# Bitcoin address checksum validation
+#
+# RE_BTC only matches by *shape* (right alphabet, right length) -- it cannot tell
+# a real address from a random base58/bech32-shaped string of the same length
+# that happens to appear in a binary (e.g. a hash, an encoded blob, an unrelated
+# identifier). Both legacy and SegWit Bitcoin address formats embed a real,
+# cheaply-verifiable checksum; validating it turns "looks like a BTC address"
+# into "is structurally a valid BTC address" and removes an entire class of
+# false positives, stdlib-only (hashlib.sha256 for Base58Check, pure bit
+# arithmetic for bech32 -- no new dependency).
+#
+# Ethereum and Monero don't get the same treatment here: ETH's EIP-55 mixed-case
+# checksum is optional and not universally used (a correct, all-lowercase address
+# has no checksum to check at all), and Monero uses a non-standard block-wise
+# base58 encoding with its own Keccak-256-based checksum -- both would need a
+# custom pure-Python Keccak implementation (hashlib's sha3 uses NIST's final
+# padding, not Keccak's original one) for comparatively less payoff than BTC.
+# ---------------------------------------------------------------------------
+
+_BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+
+def _base58_decode(s: str) -> bytes | None:
+    num = 0
+    for char in s:
+        idx = _BASE58_ALPHABET.find(char)
+        if idx == -1:
+            return None
+        num = num * 58 + idx
+    combined = num.to_bytes((num.bit_length() + 7) // 8, "big") if num else b""
+    n_leading_zeros = len(s) - len(s.lstrip("1"))
+    return b"\x00" * n_leading_zeros + combined
+
+
+def is_valid_base58check_btc(address: str) -> bool:
+    """Validates a legacy (P2PKH '1...') or P2SH ('3...') Bitcoin address's
+    Base58Check checksum: last 4 bytes must equal the first 4 bytes of
+    sha256(sha256(version_byte + 20-byte payload))."""
+    decoded = _base58_decode(address)
+    if decoded is None or len(decoded) != 25:
+        return False
+    payload, checksum = decoded[:21], decoded[21:]
+    computed = hashlib.sha256(hashlib.sha256(payload).digest()).digest()[:4]
+    return computed == checksum
+
+
+_BECH32_CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+_BECH32_CONST = 1  # BIP-173 (SegWit v0)
+_BECH32M_CONST = 0x2BC830A3  # BIP-350 (SegWit v1+ / Taproot)
+
+
+def _bech32_polymod(values: list[int]) -> int:
+    generator = [0x3B6A57B2, 0x26508E6D, 0x1EA119FA, 0x3D4233DD, 0x2A1462B3]
+    chk = 1
+    for value in values:
+        top = chk >> 25
+        chk = (chk & 0x1FFFFFF) << 5 ^ value
+        for i in range(5):
+            chk ^= generator[i] if ((top >> i) & 1) else 0
+    return chk
+
+
+def _bech32_hrp_expand(hrp: str) -> list[int]:
+    return [ord(c) >> 5 for c in hrp] + [0] + [ord(c) & 31 for c in hrp]
+
+
+def is_valid_bech32_btc(address: str) -> bool:
+    """Validates a BTC SegWit ('bc1...') address's bech32/bech32m checksum
+    (BIP-173 / BIP-350)."""
+    address = address.lower()
+    if not address.startswith("bc1"):
+        return False
+    data_part = address[3:]
+    try:
+        data = [_BECH32_CHARSET.index(c) for c in data_part]
+    except ValueError:
+        return False
+    if len(data) < 6:
+        return False
+    polymod = _bech32_polymod(_bech32_hrp_expand("bc") + data)
+    return polymod in (_BECH32_CONST, _BECH32M_CONST)
+
+
+def is_valid_btc_address(address: str) -> bool:
+    if address.lower().startswith("bc1"):
+        return is_valid_bech32_btc(address)
+    return is_valid_base58check_btc(address)
 
 
 def build_string_blob(raw: bytes) -> bytes:
@@ -46,6 +136,8 @@ def extract_wallets(data: bytes) -> list[tuple[str, str]]:
     seen = set()
     for m in p.RE_BTC.finditer(data):
         addr = m.group(0).decode('ascii', errors='ignore')
+        if not is_valid_btc_address(addr):
+            continue
         if addr not in seen:
             seen.add(addr)
             results.append(("BTC", addr))

@@ -7,8 +7,16 @@
         "auto_collapse": false,
         "body": [
           {
-            "address": "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "address": "112D2adLM3UKy4Z4giRbReR6gjWuvHUqB",
             "coin": "BTC"
+          },
+          {
+            "address": "0xffffffffffffffffffffffffffffffffffffffff",
+            "coin": "ETH"
+          },
+          {
+            "address": "40AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "coin": "XMR"
           }
         ],
         "body_config": {
@@ -35,7 +43,9 @@
           "file": {
             "string": {
               "extracted": [
-                "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                "112D2adLM3UKy4Z4giRbReR6gjWuvHUqB",
+                "0xffffffffffffffffffffffffffffffffffffffff",
+                "40AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
               ]
             }
           }
@@ -873,7 +883,17 @@
         {
           "heur_id": 1,
           "signatures": [],
-          "value": "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          "value": "0xffffffffffffffffffffffffffffffffffffffff"
+        },
+        {
+          "heur_id": 1,
+          "signatures": [],
+          "value": "112D2adLM3UKy4Z4giRbReR6gjWuvHUqB"
+        },
+        {
+          "heur_id": 1,
+          "signatures": [],
+          "value": "40AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         },
         {
           "heur_id": 10,
