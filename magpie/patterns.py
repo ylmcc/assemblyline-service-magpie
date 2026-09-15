@@ -107,8 +107,17 @@ RE_PASTEBIN_RAW = re.compile(rb'https?://(?:www\.)?pastebin\.com/raw/[A-Za-z0-9]
 # "PWD=/home/user" line in an env dump or .bashrc would otherwise be reported as
 # a leaked credential. Value capped at 32 chars so a rare genuine hit sitting
 # next to more packed-string garbage (see RE_ONION comment) doesn't run away.
+#
+# Excludes ();, from the captured value on top of the original exclusions --
+# confirmed via a real sample (decompiled .NET source text, which Magpie's broad
+# accepts: .* scans just like any other file) that without this, an assignment
+# statement like `password = networkCredential.Password);` gets captured whole,
+# since parens/semicolons/commas were otherwise valid "non-whitespace" characters.
+# is_probable_code_reference() below catches the remaining case where the RHS is a
+# plain dotted identifier chain (e.g. `credentials.Password.ToSecureStr`) with none
+# of these punctuation marks to stop at.
 RE_CRED = re.compile(
-    rb'(?i)\b(?:password|passwd)\s*[:=]\s*([^\s\x00\r\n"\']{4,32})'
+    rb'(?i)\b(?:password|passwd)\s*[:=]\s*([^\s\x00\r\n"\'();,]{4,32})'
 )
 
 # user:pass@host style -- password restricted to alphanumeric + common credential chars
@@ -124,7 +133,18 @@ CRED_PLACEHOLDER_DENYLIST = frozenset({
     "password", "passwd", "pwd", "changeme", "change_me", "your_password_here",
     "xxxxx", "xxxxxxxx", "********", "placeholder", "insert_password_here",
     "secret", "test", "test123", "123456", "password123", "example",
+    "null", "nil", "none", "undefined", "nullptr",
 })
+
+# Matches a bare dotted identifier chain (e.g. "credentials.Password.ToSecureStr",
+# "networkCredential.Password") with no other punctuation for RE_CRED's tightened
+# character class to stop at -- confirmed via a real sample that decompiled .NET
+# source text produces exactly this shape for a property/method access on the RHS
+# of a "password = ..." assignment, which is a code reference, never a literal
+# credential value.
+RE_CODE_IDENTIFIER_CHAIN = re.compile(
+    rb'^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+$'
+)
 
 # ---------------------------------------------------------------------------
 # Shell dropper / cloud metadata already above; PE/binary-specific artifacts below

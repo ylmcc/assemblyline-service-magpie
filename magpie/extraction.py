@@ -210,6 +210,8 @@ def extract_credentials(data: bytes) -> list[tuple[str, str]]:
         stripped = val.strip("'\"")
         if stripped.lower() in p.CRED_PLACEHOLDER_DENYLIST:
             continue
+        if p.RE_CODE_IDENTIFIER_CHAIN.match(m.group(1)):
+            continue
         if val not in seen:
             seen.add(val)
             results.append(("generic_password_kv", val))
