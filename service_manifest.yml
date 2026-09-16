@@ -129,6 +129,16 @@ heuristics:
       ransom_with_payment_evidence: 500
     attack_id: [T1486]
 
+  - heur_id: 13
+    name: Go Build Path Leak
+    description: An absolute Go source build path was extracted, potentially leaking the build machine's project/directory structure (the Linux/macOS analogue of a PDB leak); scored higher when the project directory name itself matches known C2/malware-tooling terminology
+    filetype: ".*"
+    score: 100
+    max_score: 500
+    signature_score_map:
+      build_path: 100
+      suspicious_build_path: 450
+
 docker_config:
   image: kylemc54321/assemblyline-service-magpie:$SERVICE_TAG
   cpu_cores: 1.0

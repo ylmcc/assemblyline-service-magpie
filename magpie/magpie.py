@@ -48,6 +48,7 @@ class Magpie(ServiceBase):
         droppers = ext.extract_droppers(data)
         cloud_meta = ext.extract_cloud_meta(data)
         pdb_paths = ext.extract_pdb_paths(data)
+        go_paths = ext.extract_go_build_paths(data)
         win32_apis = ext.extract_win32_apis(data)
         antivm = ext.extract_antivm_strings(data)
         c2_channels = ext.extract_c2_channels(data)
@@ -125,6 +126,16 @@ class Magpie(ServiceBase):
             for path, user in pdb_paths:
                 section.add_row(TableRow(path=path, username=user))
                 section.add_tag("file.pe.pdb_filename", path)
+            result.add_section(section)
+
+        if go_paths:
+            section = ResultTableSection("Go Build Path Leaks")
+            heur = Heuristic(13)
+            for path, project, suspicious in go_paths:
+                section.add_row(TableRow(path=path, project=project))
+                section.add_tag("file.string.extracted", path)
+                heur.add_signature_id("suspicious_build_path" if suspicious else "build_path")
+            section.set_heuristic(heur)
             result.add_section(section)
 
         if win32_apis:

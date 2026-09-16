@@ -1,14 +1,22 @@
 {
   "extra": {
     "drop_file": false,
-    "score": 4950,
+    "score": 5400,
     "sections": [
       {
         "auto_collapse": false,
         "body": [
           {
-            "address": "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "address": "112D2adLM3UKy4Z4giRbReR6gjWuvHUqB",
             "coin": "BTC"
+          },
+          {
+            "address": "0xffffffffffffffffffffffffffffffffffffffff",
+            "coin": "ETH"
+          },
+          {
+            "address": "40AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "coin": "XMR"
           }
         ],
         "body_config": {
@@ -35,7 +43,9 @@
           "file": {
             "string": {
               "extracted": [
-                "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                "112D2adLM3UKy4Z4giRbReR6gjWuvHUqB",
+                "0xffffffffffffffffffffffffffffffffffffffff",
+                "40AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
               ]
             }
           }
@@ -325,6 +335,46 @@
           }
         },
         "title_text": "PDB Debug Paths",
+        "zeroize_on_tag_safe": false
+      },
+      {
+        "auto_collapse": false,
+        "body": [
+          {
+            "path": "/root/shadow-c2/shadow-c2/bot_client.go",
+            "project": "shadow-c2"
+          }
+        ],
+        "body_config": {
+          "column_order": [
+            "path",
+            "project"
+          ]
+        },
+        "body_format": "TABLE",
+        "classification": "TLP:C",
+        "depth": 0,
+        "heuristic": {
+          "attack_ids": [],
+          "frequency": 1,
+          "heur_id": 13,
+          "score": 450,
+          "score_map": {},
+          "signatures": {
+            "suspicious_build_path": 1
+          }
+        },
+        "promote_to": null,
+        "tags": {
+          "file": {
+            "string": {
+              "extracted": [
+                "/root/shadow-c2/shadow-c2/bot_client.go"
+              ]
+            }
+          }
+        },
+        "title_text": "Go Build Path Leaks",
         "zeroize_on_tag_safe": false
       },
       {
@@ -735,6 +785,13 @@
         "signatures": [
           "ransom_with_payment_evidence"
         ]
+      },
+      {
+        "attack_ids": [],
+        "heur_id": 13,
+        "signatures": [
+          "suspicious_build_path"
+        ]
       }
     ],
     "tags": {
@@ -817,9 +874,26 @@
           "value": "/dev/shm/payload"
         },
         {
+          "heur_id": 13,
+          "signatures": [
+            "suspicious_build_path"
+          ],
+          "value": "/root/shadow-c2/shadow-c2/bot_client.go"
+        },
+        {
           "heur_id": 1,
           "signatures": [],
-          "value": "1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          "value": "0xffffffffffffffffffffffffffffffffffffffff"
+        },
+        {
+          "heur_id": 1,
+          "signatures": [],
+          "value": "112D2adLM3UKy4Z4giRbReR6gjWuvHUqB"
+        },
+        {
+          "heur_id": 1,
+          "signatures": [],
+          "value": "40AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         },
         {
           "heur_id": 10,
