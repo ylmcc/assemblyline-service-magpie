@@ -413,6 +413,10 @@ def extract_win32_apis(data: bytes) -> dict[str, set[str]]:
     return found
 
 
+def extract_known_dotnet_runpe_signature(data: bytes) -> bool:
+    return p.RE_KNOWN_DOTNET_RUNPE_SIGNATURE.search(data) is not None
+
+
 def extract_antivm_strings(data: bytes) -> list[str]:
     seen = set()
     results = []

@@ -134,6 +134,18 @@ CRED_PLACEHOLDER_DENYLIST = frozenset({
     "xxxxx", "xxxxxxxx", "********", "placeholder", "insert_password_here",
     "secret", "test", "test123", "123456", "password123", "example",
     "null", "nil", "none", "undefined", "nullptr",
+    # Bare language keywords -- confirmed via a real sample (decompiled .NET
+    # source text) that RE_CRED's `password\s*[:=]\s*` can span a line break and
+    # land on the next statement's leading keyword (e.g. a `Password = ...`
+    # field followed on the next line by a `using (...)` block), producing a
+    # single-word "value" that is actually just the start of unrelated code, not
+    # a credential. RE_CODE_IDENTIFIER_CHAIN only catches *dotted* identifier
+    # chains, so a bare keyword like this needs its own denylist entries.
+    "using", "namespace", "class", "public", "private", "protected", "internal",
+    "static", "void", "return", "import", "include", "require", "new", "this",
+    "base", "get", "set", "var", "let", "const", "function", "def", "throw",
+    "try", "catch", "finally", "if", "else", "for", "while", "foreach", "switch",
+    "case", "break", "continue", "yield", "async", "await",
 })
 
 # Matches a bare dotted identifier chain (e.g. "credentials.Password.ToSecureStr",
@@ -223,6 +235,19 @@ RE_WIN32_API_BY_CATEGORY: dict = {
     cat: re.compile(rb'\b(?:' + rb'|'.join(re.escape(n) for n in names) + rb')\b')
     for cat, names in WIN32_API_CATEGORIES.items()
 }
+
+# Known-public .NET RunPE/crypter-stub signatures. Confirmed via a real sample
+# (decompiled with de4dot): a process-hollowing implementation (VirtualAllocEx +
+# ZwUnmapViewOfSection + WriteProcessMemory + SetThreadContext -- the exact
+# WIN32_API_CATEGORIES["process_injection"] cluster above) living in a .NET
+# namespace literally called `HackForums.gigajew` -- a widely copy-pasted public
+# RunPE snippet reused across a huge number of unrelated commodity .NET
+# loaders/crypters. Unlike the generic API cluster (which can appear in legitimate
+# low-level tooling too), no legitimate software ships a namespace named this --
+# matching on the bare "gigajew" token (case-insensitive) alone is already a very
+# low-false-positive, high-confidence signature, so a full "HackForums." prefix
+# match isn't required to fire.
+RE_KNOWN_DOTNET_RUNPE_SIGNATURE = re.compile(rb'gigajew', re.IGNORECASE)
 
 # Anti-VM / anti-sandbox / anti-analysis artifact strings. Deliberately excludes
 # generic sandbox usernames ("John"/"SANDBOX") -- too false-positive-prone (real

@@ -146,6 +146,17 @@ def test_credential_userpass_at_host_only_in_stratum_context():
     assert any(t == "userpass_at_host" for t, _ in with_stratum)
 
 
+def test_bare_language_keyword_not_treated_as_credential():
+    # Regression: a real live submission's Magpie result reported a bare "using"
+    # as a "generic_password_kv" credential. RE_CRED's `\s*[:=]\s*` spans line
+    # breaks, so on decompiled .NET source text a `Password = ...` field followed
+    # on the next line by a `using (...)` block landed on that leading keyword as
+    # the "value". RE_CODE_IDENTIFIER_CHAIN doesn't catch this since it's a bare
+    # word, not a dotted identifier chain -- needs its own denylist entry.
+    creds = extract_credentials(b"Password =\nusing (var conn = new SqlConnection())")
+    assert creds == []
+
+
 def test_bare_pwd_env_var_not_treated_as_credential():
     # Regression: a real Go ARM ELF sample's Magpie result reported
     # "PATH3125Atoi-Inf+InfquitJuneJuly" as a leaked "generic_password_kv"
