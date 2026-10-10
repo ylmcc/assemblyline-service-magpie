@@ -1,4 +1,4 @@
-"""Pure extraction functions for Magpie -- no AL/ServiceBase imports, no network,
+"""Pure extraction functions for Magpie -- no ServiceBase imports (only AL's own tag validator), no network,
 no execution of any kind. Directly unit-testable. Operates on a flat bytes blob of
 newline-joined printable strings (see build_string_blob) extracted from a file's
 raw content, mirroring what `strings` does.
@@ -8,6 +8,8 @@ from __future__ import annotations
 import hashlib
 import ipaddress
 from itertools import chain
+
+from assemblyline.common.net import is_valid_email
 
 from . import patterns as p
 
@@ -238,6 +240,12 @@ def extract_emails(data: bytes) -> list[str]:
     results = []
     for m in p.RE_EMAIL.finditer(data):
         val = m.group(0).decode('utf-8', errors='ignore').lower()
+        # The regex matches by shape only, so random/compressed bytes produce things like
+        # "w@x.bu". AL rejects any network.email.address tag its own validator refuses
+        # (unknown TLD etc.), and one rejected tag fails the whole Magpie result -- so
+        # apply that same validator here.
+        if not is_valid_email(val):
+            continue
         if val not in seen:
             seen.add(val)
             results.append(val)

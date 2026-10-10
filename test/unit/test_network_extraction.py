@@ -232,3 +232,11 @@ def test_user_agent_mozilla_form_extracted():
 def test_user_agent_header_form_extracted():
     uas = extract_user_agents(b"User-Agent: PlaceholderBot/1.0\r\n")
     assert "PlaceholderBot/1.0" in uas
+
+
+def test_email_rejects_shapes_al_would_refuse_as_a_tag():
+    """Regression: these came out of real binaries' compressed/random bytes and protobuf
+    descriptors, and AL's tag validator rejected them, failing the whole Magpie result."""
+    noise = (b"w@x.bu p@ia-bmcsd-ewfignh.ydzl s%@za.wxj .google.protobuf.emptybbz@github.com "
+             b"toolchain@v0.0.1-go1.25.0.linux 2@.containerd.services.tasks.v1.updatetaskrequest.annotationsentryr")
+    assert extract_emails(noise + b" real: person@example.com") == ["person@example.com"]
